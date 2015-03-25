@@ -74,7 +74,7 @@ int main( int argc, char* argv[] ){
 			int totalbytes = 0;
 			struct lrit_packet packet;
 			while( totalbytes < sizeof(packet) ){
-				numbytes = recv(sock,&((char*)&packet)[totalbytes],sizeof(packet)-totalbytes,0);
+				numbytes = recv(sock,&((unsigned*)&packet)[totalbytes],sizeof(packet)-totalbytes,0);
 				if( numbytes < 0 ){
 					printf("Packet Recieve Failed");
 					run = 0;
