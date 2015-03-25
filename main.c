@@ -13,6 +13,10 @@ int run = 1;
 
 void handler(int i){
 	run = 0;
+	printf("Closing Proram\n");
+	printf( "Lrit Packet Size %d\n", sizeof(struct lrit_packet) );
+	printf( "PRIMARY HEADER Size %d\n", sizeof( struct PRIMARY_HEADER ));
+	printf( "PDU size %d\n", sizeof( struct PDU ) );
 }
 
 int main( int argc, char* argv[] ){
@@ -59,7 +63,7 @@ int main( int argc, char* argv[] ){
 		unsigned char buffer;
 		int numbytes = recv(sock,&buffer,1, 0 );
 		if( numbytes < 0){
-			printf("recieve failed");
+			printf("recieve failed: %d\n", numbytes);
 			run = 0;
 			continue;
 		}else if( numbytes == 0 ){
@@ -76,16 +80,18 @@ int main( int argc, char* argv[] ){
 			while( totalbytes < sizeof(packet) ){
 				numbytes = recv(sock,&((unsigned*)&packet)[totalbytes],sizeof(packet)-totalbytes,0);
 				if( numbytes < 0 ){
-					printf("Packet Recieve Failed");
+					printf("Packet Recieve Failed: %d\n ", numbytes);
 					run = 0;
-					continue;
+					break;
 				}
 				totalbytes+=numbytes;
 			}
-			
-			process_packet( &packet );
-			printf("Packet Processed\n");
+			if( numbytes >= 0 ){
+				process_packet( &packet );
+				printf("Packet Processed\n");
+			}
 		}
+		
 
 	}
 

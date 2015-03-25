@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 
-
 struct PRIMARY_HEADER{
 	uint16_t version: 2;
 	uint16_t spacecraft: 8;
@@ -14,6 +13,7 @@ struct PRIMARY_HEADER{
 	uint32_t   spare: 7;
 	
 };
+
 struct PDU{
 	uint16_t spare: 5;
 	uint16_t first_pointer: 11;
