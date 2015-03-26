@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <cstring>
+#include <list>
 using namespace std;
 
 const size_t BUFFER_LEN=3*1024*1024;
@@ -73,6 +74,7 @@ class PDU_Processor{
 		memset( buffer, 0, BUFFER_LEN-1 );
 		buffer_end = 0;
 		first_pointer = -1;
+		num_packets_not_processed = 0;
 	}
 	
 	
@@ -81,9 +83,15 @@ class PDU_Processor{
 	 *  * Given a CVCDU data set, create a M_PDU
 	 *   * returns 1 if a packet is ready, 0 otherwise
 	 *    */
+	/*
 	unsigned char buffer[BUFFER_LEN];
-	unsigned int buffer_end;
-	unsigned int first_pointer;
+	size_t buffer_end;
+	size_t first_pointer;
+	size_t num_packets_not_processed;
+	*/
+
+	list<M_PDU_header> buffer;
+	
 	
 	M_PDU get_pdu_base_data( );
 };

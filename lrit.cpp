@@ -33,10 +33,16 @@ int PDU_Processor::process_packet( struct lrit_packet *packet, M_PDU &pdu ){
 		printf( "************* outside packet************");
 	}
 
+	buffer.push_back( pdu_header );
+
+
+	
 	// add the data to the buffer
+	/*
 	memcpy( this->buffer+this->buffer_end,packet->data+2,884);
 	
 	if( pdu_header.first_pointer == 0x7FF ){
+		printf( "Adding Data to buffer\n");
 		this->buffer_end += 884;
 		// this packet doesn't contain a header, just data problably
 		return status; // this definately means just pad things
@@ -48,7 +54,7 @@ int PDU_Processor::process_packet( struct lrit_packet *packet, M_PDU &pdu ){
 		this->first_pointer = pdu_header.first_pointer+this->buffer_end;
 	}
 	this->buffer_end += 884;
-
+	this->num_packets_not_processed+=1; 
 	M_PDU tmp_pdu = get_pdu_base_data( );
 
 	printf( " Found some actual PDU data (Current buffer length: %d, First Pointer: %d)\n", buffer_end,first_pointer);
@@ -64,14 +70,15 @@ int PDU_Processor::process_packet( struct lrit_packet *packet, M_PDU &pdu ){
 		status = 1;
 
 		// something is wrong with this part I think
-		size_t diff = this->buffer_end - tmp_pdu.length+1 - 6;
-		memmove( this->buffer, this->buffer+first_pointer+6+tmp_pdu.length+1, this->buffer_end-diff );
-		this->buffer_end -= diff;
+		size_t bytes_getting_removed = 884*this->num_packets_not_processed; // these always come in 884 byte chunks and first_pointer is referenced to that boundry
+		memmove( this->buffer, this->buffer+bytes_getting_removed, this->buffer_end-bytes_getting_removed );
+		this->buffer_end -= bytes_getting_removed;
 		
-		this->first_pointer=0;
+		this->first_pointer=pdu_header.first_pointer;
+		this->num_packets_not_processed = 0; // reset this counter.
 	}
 	
-	
+	*/
 	return status;
 
 	
