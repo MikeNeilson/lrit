@@ -1,46 +1,108 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include "lrit.h"
+#include <cstring>
+using namespace std;
 
-#define BUFFER_LEN 3*1024*1024
-
-void process_packet( struct lrit_packet *packet ){
-	static unsigned char buffer[BUFFER_LEN];
-	static unsigned int buffer_end = 0;
-	static unsigned int first_pointer = 0;
-	printf( "Processing Packet from spacecraft %d, packet number %d, vc_id: %d\n", packet->primary_header.spacecraft, packet->primary_header.counter, packet->primary_header.vc_id);
+/*
+ * Given a CVCDU data set, create a M_PDU
+ * returns 1 if a packet is ready, 0 otherwise
+ */
+int PDU_Processor::process_packet( struct lrit_packet *packet, M_PDU &pdu ){
+	int status = 0; 
+	//printf( "Processing Packet from spacecraft %d, packet number %d, vc_id: %d\n", packet->primary_header.spacecraft, packet->primary_header.counter, packet->primary_header.vc_id);
 
 	if( packet->primary_header.vc_id == 63 ){
-		printf("****Filler");
-		return; // filler packet
+		printf("****Filler\n");
+		return status; // filler packet
 	}
 	if( packet->primary_header.version != 1 ){
-		printf( "Bad Packet" );
+		printf( "Bad Packet\n" );
+		return status;
 	}
 
-	printf( "First pointer: %d\n", packet->pdu.first_pointer );
+	struct M_PDU_header pdu_header;
+	uint16_t tmp;
+	memcpy( &tmp, packet->data, 2 );
+	pdu_header.spare = (tmp & 0xF800 ) >> 11;
+	pdu_header.first_pointer = (tmp & 0x7FF );
+	
+	
+	printf( "First pointer: %d\n", pdu_header.first_pointer );
+	if( pdu_header.first_pointer > 884  && pdu_header.first_pointer != 2047){
+		printf( "************* outside packet************");
+	}
+
+	// add the data to the buffer
+	memcpy( this->buffer+this->buffer_end,packet->data+2,884);
+	
+	if( pdu_header.first_pointer == 0x7FF ){
+		this->buffer_end += 884;
+		// this packet doesn't contain a header, just data problably
+		return status; // this definately means just pad things
+	}
+
+	if( this->first_pointer == -1 ){
+		// if this is the first time we've started setup the M_PDU pointer
+		// we may have gotten all 0x7FF packets before this
+		this->first_pointer = pdu_header.first_pointer+this->buffer_end;
+	}
+	this->buffer_end += 884;
+
+	M_PDU tmp_pdu = get_pdu_base_data( );
+
+	printf( " Found some actual PDU data (Current buffer length: %d, First Pointer: %d)\n", buffer_end,first_pointer);
+	printf( " APID: %d\n Secondary Header: %d\n SeqFlag: %d\n SeqCount: %d\n Length: %d\n", tmp_pdu.apid, tmp_pdu.secondary_header, tmp_pdu.seq_flag, tmp_pdu.seq_count, tmp_pdu.length );
+
+
+	// now we see if we can build a full packet
+	if( this->first_pointer + tmp_pdu.length < this->buffer_end ){
+		// we should have a complete packet now
+		printf( "Have complete packet\n");
+		pdu = tmp_pdu;
+		memcpy(pdu.data, this->buffer+this->first_pointer+6, tmp_pdu.length+1 );
+		status = 1;
+
+		// something is wrong with this part I think
+		size_t diff = this->buffer_end - tmp_pdu.length+1 - 6;
+		memmove( this->buffer, this->buffer+first_pointer+6+tmp_pdu.length+1, this->buffer_end-diff );
+		this->buffer_end -= diff;
 		
-	unsigned char buf[2] = {0};
-	memcpy( buf, (unsigned char*)&packet->pdu, 2 );
-	printf( "****%X%X\n", buf[0], buf[1] );
-	
-	
-	
-	struct SPU sdu;
-
-	if( packet->pdu.first_pointer <  (884-6) ){ // for now, just wait for the first packet that starts within the packet we have.
-		memcpy( (unsigned char*)&sdu, &packet->pdu.spu_data[packet->pdu.first_pointer], 6 );
-
-
-		printf( " Found some actual SPU data\n");
-		printf( " APID: %d\n Secondary Header: %d\n SeqFlag: %d\n SeqCount: %d\n Length: %d\n", sdu.apid, sdu.secondary_header, sdu.seq_flag, sdu.seq_count, sdu.length );
-
+		this->first_pointer=0;
 	}
 	
 	
-	
+	return status;
 
 	
+}
+
+M_PDU PDU_Processor::get_pdu_base_data(){
+	M_PDU pdu;
+	// copy packet id
+	printf("*****0x");
+	for(int i = this->first_pointer; i < this->first_pointer+6;i++){
+		printf("%0X", buffer[i] );
+	}
+	printf("*****");
+	uint16_t tmp;
+	memcpy( &tmp, this->buffer+this->first_pointer, 2);
+	pdu.version          = (tmp & 0xE000) >> 13;
+	pdu.type             = (tmp & 0x0100) >> 12;
+	pdu.secondary_header = (tmp & 0x0800) >> 11;
+	pdu.apid             = (tmp & 0x07FF);
+
+	
+	// sequence control
+	memcpy( &tmp, this->buffer+this->first_pointer+2, 2);
+	pdu.seq_flag         = (tmp & 0xC000) >> 14;
+	pdu.seq_count        = (tmp & 0x3FFF);
+
+	// length
+	memcpy( &tmp, this->buffer+this->first_pointer+2+2, 2);
+	pdu.length = tmp;
+	return pdu;
+
 }
 
 

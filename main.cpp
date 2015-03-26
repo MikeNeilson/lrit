@@ -2,21 +2,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <map>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
 #include "lrit.h"
+#include "fileproc.h"
 
 int run = 1;
 
 void handler(int i){
 	run = 0;
 	printf("Closing Proram\n");
-	printf( "Lrit Packet Size %d\n", sizeof(struct lrit_packet) );
-	printf( "PRIMARY HEADER Size %d\n", sizeof( struct PRIMARY_HEADER ));
-	printf( "PDU size %d\n", sizeof( struct PDU ) );
 }
 
 int main( int argc, char* argv[] ){
@@ -53,7 +52,8 @@ int main( int argc, char* argv[] ){
 	}
 	
 	signal(SIGINT,handler);
-
+	PDU_Processor pdu_proc;
+	FILE_Processor file_proc;
 	//char start_pattern[4] = {0x1A,0xCF, 0xFC, 0x1D};
 	//char buffer[5] = {0};
 	//int i = 0;
@@ -77,8 +77,10 @@ int main( int argc, char* argv[] ){
 			received=0; // clear the little buffer
 			int totalbytes = 0;
 			struct lrit_packet packet;
-			while( totalbytes < sizeof(packet) ){
-				numbytes = recv(sock,&((unsigned*)&packet)[totalbytes],sizeof(packet)-totalbytes,0);
+			M_PDU pdu;
+			uint8_t buf2[1024] = {0};
+			while( totalbytes < 1020 ){
+				numbytes = recv(sock,&(buf2[totalbytes]),1020-totalbytes,0);
 				if( numbytes < 0 ){
 					printf("Packet Recieve Failed: %d\n ", numbytes);
 					run = 0;
@@ -86,8 +88,29 @@ int main( int argc, char* argv[] ){
 				}
 				totalbytes+=numbytes;
 			}
-			if( numbytes >= 0 ){
-				process_packet( &packet );
+			if( numbytes >= 0 && totalbytes == 1020){
+				//memcpy( (unsigned char*)&packet, buf2, 1020 );
+				// NOTE, below is probably not endian safe
+				uint16_t tmp;
+				memcpy( &tmp, buf2, 2);
+				packet.primary_header.version   = (tmp & 0xC000) >> 14;
+				packet.primary_header.spacecraft= (tmp & 0x3FC0) >>  6;
+				packet.primary_header.vc_id     = (tmp & 0x003F);
+				
+				uint32_t tmp2;
+				memcpy( &tmp2, &buf2[2],4);
+				packet.primary_header.counter   = (tmp2 & 0xFFFFFF00) >>  8;
+				packet.primary_header.replay    = (tmp2 & 0x00000080) >>  7;
+				packet.primary_header.spare     = (tmp2 & 0x0000007F);
+				memcpy( packet.data, (buf2+6), 886 );
+
+				printf( "Processing Packet from spacecraft %d, packet number %d, vc_id: %d\n", packet.primary_header.spacecraft, packet.primary_header.counter, packet.primary_header.vc_id);
+				int status = pdu_proc.process_packet( &packet, pdu );
+				if( status ){
+					printf("We have a complete M_PDU packet\n");
+					file_proc.process_pdu( pdu );
+				}
+				// check status, do something
 				printf("Packet Processed\n");
 			}
 		}
