@@ -52,7 +52,7 @@ int main( int argc, char* argv[] ){
 	}
 	
 	signal(SIGINT,handler);
-	PDU_Processor pdu_proc;
+	SDU_Processor sdu_proc;
 	FILE_Processor file_proc;
 	//char start_pattern[4] = {0x1A,0xCF, 0xFC, 0x1D};
 	//char buffer[5] = {0};
@@ -77,12 +77,14 @@ int main( int argc, char* argv[] ){
 			received=0; // clear the little buffer
 			int totalbytes = 0;
 			struct lrit_packet packet;
-			M_PDU pdu;
+			M_SDU sdu;
+			memset( &sdu, 0, sizeof(sdu) );
 			uint8_t buf2[1024] = {0};
 			while( totalbytes < 1020 ){
 				numbytes = recv(sock,&(buf2[totalbytes]),1020-totalbytes,0);
 				if( numbytes < 0 ){
 					printf("Packet Recieve Failed: %d\n ", numbytes);
+					perror(NULL);
 					run = 0;
 					break;
 				}
@@ -104,14 +106,14 @@ int main( int argc, char* argv[] ){
 				packet.primary_header.spare     = (tmp2 & 0x0000007F);
 				memcpy( packet.data, (buf2+6), 886 );
 
-				printf( "Processing Packet from spacecraft %d, packet number %d, vc_id: %d\n", packet.primary_header.spacecraft, packet.primary_header.counter, packet.primary_header.vc_id);
-				int status = pdu_proc.process_packet( &packet, pdu );
+				printf( "%s:%d Processing Packet from spacecraft %d, packet number %d, vc_id: %d\n",__FILE__,__LINE__, packet.primary_header.spacecraft, packet.primary_header.counter, packet.primary_header.vc_id);
+				int status = sdu_proc.process_packet( &packet, sdu );
 				if( status ){
-					printf("We have a complete M_PDU packet\n");
-					file_proc.process_pdu( pdu );
+					printf("%s:%d We have a complete M_PDU packet\n", __FILE__, __LINE__);
+					file_proc.process_sdu( sdu );
+					printf("%s:%d Packet Processed\n", __FILE__, __LINE__);
 				}
 				// check status, do something
-				printf("Packet Processed\n");
 			}
 		}
 		
