@@ -107,7 +107,7 @@ const uint8_t SEQ_CONTINUATION  = 0;
 const uint8_t SEQ_LAST_SEGMENT  = 2;
 
 const uint16_t APID_FILL = 2047;
-const uint16_t PDU_FILL  = 0x7FF;
+const uint16_t PDU_NO_HEADER  = 0x7FF;
 
 
 

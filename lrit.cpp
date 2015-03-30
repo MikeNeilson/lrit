@@ -100,7 +100,7 @@ int SDU_Processor::get_sdu(uint8_t vcid, M_SDU &sdu){
 	list<M_PDU>::iterator start = pdu;
 	while( pkgdata < sdu.length+1 && pdu != buffer.end()  ){
 		printf("%s:%d Cur First Pointer: %d\n", __FILE__,__LINE__, pdu->first_pointer );
-		if ( pdu->first_pointer == PDU_FILL ){
+		if ( pdu->first_pointer == PDU_NO_HEADER ){
 			//middle PDU for SDU
 			// we just copy the whole thing
 			printf("%s:%d Adding full packet zone to M_SDU (884)\n", __FILE__, __LINE__ );
