@@ -10,12 +10,14 @@
 #include <signal.h>
 #include "lrit.h"
 #include "fileproc.h"
+#include "util.h"
 
 int run = 1;
-
+int debug = 0;
 void handler(int i){
 	run = 0;
-	printf("Closing Proram\n");
+	//printf("Closing Proram\n");
+	DEBUG("%s", "Closing Program\n" );
 }
 
 int main( int argc, char* argv[] ){
@@ -25,7 +27,7 @@ int main( int argc, char* argv[] ){
 		return 1;
 	}
 
-
+	
 	char *serverAddressStr = argv[1];
 	in_port_t serverPort = atoi( argv[2] );
 	
@@ -73,7 +75,7 @@ int main( int argc, char* argv[] ){
 
 		
 		if( received == start_pattern ){
-			printf( "Found packet\n" );
+			DEBUG( "%s", "Found packet\n" );
 			received=0; // clear the little buffer
 			int totalbytes = 0;
 			struct lrit_packet packet;
@@ -106,12 +108,12 @@ int main( int argc, char* argv[] ){
 				packet.primary_header.spare     = (tmp2 & 0x0000007F);
 				memcpy( packet.data, (buf2+6), 886 );
 
-				printf( "%s:%d Processing Packet from spacecraft %d, packet number %d, vc_id: %d\n",__FILE__,__LINE__, packet.primary_header.spacecraft, packet.primary_header.counter, packet.primary_header.vc_id);
+				DEBUG( "%s","Processing Packet from spacecraft %d, packet number %d, vc_id: %d\n", packet.primary_header.spacecraft, packet.primary_header.counter, packet.primary_header.vc_id);
 				int status = sdu_proc.process_packet( &packet, sdu );
 				if( status ){
-					printf("%s:%d We have a complete M_PDU packet\n", __FILE__, __LINE__);
+					DEBUG("%s","We have a complete M_PDU packet\n");
 					file_proc.process_sdu( sdu );
-					printf("%s:%d Packet Processed\n", __FILE__, __LINE__);
+					DEBUG("%s","Packet Processed\n");
 				}
 				// check status, do something
 			}

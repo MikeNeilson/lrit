@@ -65,8 +65,6 @@ class Transport_File{
 };
 
 
-uint16_t swap_u16( uint16_t val );
-uint32_t swap_u32( uint32_t val );
 
 class SDU_Processor{
 	public:
@@ -99,6 +97,19 @@ class SDU_Processor{
 };
 
 
+//FILE HEADER RECORDS
+//
+struct PRIMARY_HEADER_RECORD{
+	uint8_t header_type;
+	uint16_t length;
+	uint8_t  file_type;
+	uint32_t total_header_length;
+	uint64_t data_field_length;
+};
+
+
+
+
 // flags
 //
 const uint8_t SEQ_COMPLETE_FILE = 3;
@@ -110,5 +121,12 @@ const uint16_t APID_FILL = 2047;
 const uint16_t PDU_NO_HEADER  = 0x7FF;
 
 
+const uint8_t PRIMARY_HEADER_TYPE = 0;
+const uint8_t FILE_TYPE_IMAGE = 0;
+const uint8_t FILE_TYPE_GTS = 1;
+const uint8_t FILE_TYPE_TEXT= 2;
+const uint8_t FILE_TYPE_ENC_KEY = 3;
+// 4...127 reservered
+// 128...255 mission specific use
 
 #endif
