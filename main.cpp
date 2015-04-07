@@ -13,7 +13,7 @@
 #include "util.h"
 
 int run = 1;
-int debug = 0;
+int debug = 1;
 void handler(int i){
 	run = 0;
 	//printf("Closing Proram\n");
@@ -108,7 +108,7 @@ int main( int argc, char* argv[] ){
 				packet.primary_header.spare     = (tmp2 & 0x0000007F);
 				memcpy( packet.data, (buf2+6), 886 );
 
-				DEBUG( "%s","Processing Packet from spacecraft %d, packet number %d, vc_id: %d\n", packet.primary_header.spacecraft, packet.primary_header.counter, packet.primary_header.vc_id);
+				DEBUG( "Processing Packet from spacecraft %d, packet number %d, vc_id: %d\n", packet.primary_header.spacecraft, packet.primary_header.counter, packet.primary_header.vc_id);
 				int status = sdu_proc.process_packet( &packet, sdu );
 				if( status ){
 					DEBUG("%s","We have a complete M_PDU packet\n");
