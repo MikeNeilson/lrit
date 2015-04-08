@@ -47,7 +47,7 @@ struct M_SDU{
 	uint8_t seq_flag;
 	uint16_t seq_count;
 
-	uint16_t length;// this length is 0 8191, so you have to add 1 for the correct byte count
+	uint16_t length;// this length is 0 to 8191, so you have to add 1 for the correct byte count
 	uint8_t data[8192]; // includes CRC
 	//unsigned char *data;
 	//uint16_t crc;

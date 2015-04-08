@@ -45,23 +45,51 @@ void FILE_Processor::process_sdu( M_SDU &sdu ){
 					       break;
 				       }
 		case SEQ_CONTINUATION:{
-					      DEBUG("%s", "Got continuing SDU of a file\n" );
-					      files_by_apid[apid].push_back( sdu );
-					    break;
-				    }
+			DEBUG("%s", "Got continuing SDU of a file\n" );
+			if( files_by_apid.count( apid ) == 1 ){
+				files_by_apid[apid].push_back( sdu );
+			}else{
+				DEBUG("%s", "But we haven't started this file yet, ignoring");
+			}
+			
+			break;
+		}
 		case SEQ_LAST_SEGMENT:{
-					      files_by_apid[apid].push_back( sdu );
-					      	
-					     DEBUG("%s","Got last SDU of a file, consisting of %d M_SDUs\n", files_by_apid[apid].size() );
-						// build file
-						list<M_SDU>::iterator first_sdu = files_by_apid[apid].begin();
-					
-						//from the first header, get the base file info
-						fill_file_info( file, *first_sdu );
+			if( files_by_apid.count( apid ) == 1 ){
+				files_by_apid[apid].push_back( sdu );
+			}else{
+				break;	
+			}
+			files_by_apid[apid].push_back( sdu );
 
-					     	this->save_file( file );
-					      break;
-				      }
+			DEBUG("Got last SDU of a file, consisting of %d M_SDUs\n", files_by_apid[apid].size() );
+			// build file
+			try{
+				list<M_SDU>::iterator _sdu = files_by_apid[apid].begin();
+
+				//from the first header, get the base file info
+				fill_file_info( file, *_sdu );
+				// now build the file from all of the M_SDU packets
+				file.tp_sdu = new unsigned char[file.length+1];//throw in the +1, in case of the filler portion
+				memcpy(file.tp_sdu, _sdu->data+10, _sdu->length-10-2 ); // -10 this was the first M_SDU that's the transport header, -2 ignore the crc
+				_sdu++;
+				// note we need to check the sequence count before putting these together. we'll put zeros 
+				// in for missing packets, but we need to increase the byte count.
+				size_t bytes_stored = _sdu->length-10-2;
+				while( _sdu != files_by_apid[apid].end() && bytes_stored < _sdu->length ){
+					memcpy(file.tp_sdu+bytes_stored, _sdu->data, _sdu->length );
+					bytes_stored += _sdu->length;
+					_sdu++;
+				}
+			
+
+				this->save_file( file );
+			}catch(... ){
+				printf("Failed to Create file for apid: %d", apid );
+			}
+			files_by_apid.erase(apid);
+			break;
+		 }
 		 default:{
 				 printf("%s:%d unknown packet type\n", __FILE__, __LINE__);
 				break;
@@ -95,7 +123,7 @@ void fill_file_info( Transport_File &file, M_SDU &sdu ){
       }
       file.length = tmp;
       file.length /= 8;
-      memcpy( &tmp, sdu.data+2, sizeof(uint64_t) ); // not sure why this doesn't work
+      memcpy( &tmp, sdu.data+2, sizeof(uint64_t) ); 
 
       DEBUG("File Counter: %d\n*********File Length: %" PRIu64",%"PRIu64 "\n", file.file_counter, tmp,file.length );
 

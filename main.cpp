@@ -13,7 +13,7 @@
 #include "util.h"
 
 int run = 1;
-int debug = 1;
+int debug = 0;
 void handler(int i){
 	run = 0;
 	//printf("Closing Proram\n");
